@@ -34,6 +34,8 @@ def load_slb_data(file):
 def load_sensor_data(file):
     data = pd.read_csv(file)
     data.index = pd.to_datetime(data['timestamp'])
+    
+    #Jag gissade lite vad som är intressant det finns mer
     data = data[['pm1_0 (µg/m³)','pm2_5 (µg/m³)','pm10_0 (µg/m³)',
                 'pc1_0 (#/cm³)', 'pc2_5 (#/cm³)','pc10_0 (#/cm³)','pressure_aq (hPa)',
                 'no2_gas (ppb)','o3_gas (ppb)','co_gas (ppb)','temp_external (°C)',
@@ -45,4 +47,5 @@ def load_sensor_data(file):
     data.columns = desc.str.split().str[0]
     desc = pd.Series(desc,index=data.columns)
     data = data.dropna()
+    
     return data, desc
