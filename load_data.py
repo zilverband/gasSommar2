@@ -19,18 +19,18 @@ NAME_DICT = {
     'no_gas' : 'NO'
 }
 
-#Takes json data from olb and returns a panda dataframe with data, and a panda series with data descriptions.
+#Takes json data from olb and returns a panda dataframe with data, and a panda series with data unitsriptions.
 def load_slb_data(file):
     data_json = json.load( open(file,'r'))
     data = pd.DataFrame.from_records(data_json["data"]).transpose()
     data.index = pd.to_datetime(data.index)
 
-    desc = data.columns
-    data.columns = desc.str.split().str[0]
-    desc = pd.Series(desc,index=data.columns)
-    return data, desc
+    units = data.columns
+    data.columns = units.str.split().str[0]
+    units = pd.Series(units.str.split().str[-1],index=data.columns)
+    return data, units
 
-#Takes csv files and returns a panda dataframe with data and a panda series with data descriptions
+#Takes csv files and returns a panda dataframe with data and a panda series with data unitsriptions
 def load_sensor_data(file):
     data = pd.read_csv(file)
     data.index = pd.to_datetime(data['timestamp'])
@@ -43,9 +43,10 @@ def load_sensor_data(file):
 
     for sensor_name,ref_name in NAME_DICT.items():
         data.columns = data.columns.str.replace(sensor_name,ref_name)
-    desc = data.columns
-    data.columns = desc.str.split().str[0]
-    desc = pd.Series(desc,index=data.columns)
-    data = data.dropna()
+    units = data.columns
+    data.columns = units.str.split().str[0]
+    units = pd.Series(units.str.split().str[-1],index=data.columns)
+    data = data.dropna(how='all')
+    data = data.dropna(axis='columns',how='all')
     
-    return data, desc
+    return data, units
