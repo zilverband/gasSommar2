@@ -21,7 +21,7 @@ GAS_STYPE = {
 
 
 #Returns a data frame with raw gas data for one gas
-def get_raw_gas_data(end_name,gas,start,end):
+def get_raw_gas_data(end_name,gas,start,end,file=None):
     #Define which information to get from API
     info = {
         "endpoint_name" : end_name,
@@ -43,12 +43,7 @@ def get_raw_gas_data(end_name,gas,start,end):
     #Converts dictionaries into better format (dictionary containing lists, not vice versa)
     raw_data = response.json()
     raw_data_df = pd.DataFrame(raw_data).dropna(subset='response')
-    try:
-        response_df = pd.DataFrame(raw_data_df['response'].to_list())
-    except:
-        print("FAIL")
-        return raw_data_df
-    print("SUCCESS")
+    response_df = pd.DataFrame(raw_data_df['response'].to_list())
     
     parsed_data = {}
     
@@ -75,4 +70,9 @@ def get_raw_gas_data(end_name,gas,start,end):
 
     data = pd.DataFrame(parsed_data,pd.to_datetime(raw_data_df['received_date']))
     data.index.name = None
-    return data
+
+    if file is not None:
+        data.to_csv(file + ".csv")
+        print("data saved to: " + file + ".csv")
+    else:
+        return data
