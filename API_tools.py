@@ -22,7 +22,7 @@ GAS_STYPE = {
 }
 
 
-#Returns a data frame with raw gas data for all the gasses in gas
+#NOT RECOMMENDED
 def get_raw_gas_data(end_name,gasses,start,end,file=None):
     #Define which information to get from API
     info = {
@@ -34,7 +34,6 @@ def get_raw_gas_data(end_name,gasses,start,end,file=None):
     data_list = []
 
     for gas in gasses:
-        info["sensor_type"] = GAS_STYPE[gas]
         new = get_one_gas(info,gas)
         new = new[~new.index.duplicated()]
         data_list.append(new) 
@@ -50,14 +49,22 @@ def combine_data(data_list):
     data = data.T.groupby(by=data.columns).mean().T
     return data
 
-def get_one_gas(info,gas):
+#Returns raw and calibrated gas data and offset
+def get_one_gas(info,gas,file=None):
+    '''
+    Gets raw and calibrated gas data and offset from the API
+
+    :param info: dictionary with keys {"start" (YYYY-MM-DD), "end" (YYYY-MM-DD), "endpoint_name"}
+    :gas: string with the desired gas, ("NO","NO2","CO","O3")
+    :return: pandas dataframe
+    '''
     action = "raw"
+    info["sensor_type"] = GAS_STYPE[gas]
     
     #Gets data from API
     response = requests.get(URL + ACTIONS[action],headers=HEADERS, params=info)
     
-
-    #Converts dictionaries into better format (dictionary containing lists, not vice versa)
+    #Converts the data into dataframes
     raw_data = response.json()
     raw_data_df = pd.DataFrame(raw_data).dropna(subset='response')
     response_df = pd.DataFrame(raw_data_df['response'].to_list())
@@ -65,12 +72,10 @@ def get_one_gas(info,gas):
     
     #interesting features
     sensor_features = {
-        "temperature" : "temp"
+        "offset_constant" : 'offset'
     }
     response_features = {
-        "ugm3" : "",
-        "raw_ugm3" : "(raw)",
-        "default_raw_ugm3" : " (default raw)"
+        "raw_ppb" : "(raw)",
     }
 
     #Collects desired features from data
@@ -79,12 +84,20 @@ def get_one_gas(info,gas):
             parsed_data[sensor_features[feature]] = raw_data_df[feature].to_list()
 
     #Gas data is in subset "response"
-    offset = raw_data_df["offset_constant"]
     for feature in response_df.columns:
         if feature in response_features:
-            parsed_data[gas + "" + response_features[feature]] = response_df[feature].to_list()
-
-    data = pd.DataFrame(parsed_data,index=pd.to_datetime(raw_data_df['received_date']))
+            parsed_data[gas] = response_df[feature].to_list()
+    
+    #Assembles data into a dataframe
+    data = pd.DataFrame(parsed_data,index=pd.to_datetime(raw_data_df['received_date'])) 
     data.index.name = None
     data.index = data.index.tz_localize(None)
+
+    #Calculates the uncalibrated data
+    data[gas+"_raw"] = data[gas] + data["offset"]
+
+    #Saves file
+    if file is not None:
+        data.to_csv(file + ".csv")
+        print("data saved to: " + file + ".csv")
     return data
