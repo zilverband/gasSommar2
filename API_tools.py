@@ -50,6 +50,11 @@ def combine_data(data_list):
     return data
 
 #Returns raw and calibrated gas data and offset
+def load_csv(file):
+    data = pd.read_csv(file,index_col=0)
+    data.index = pd.to_datetime(data.index)
+    return data
+
 def get_one_gas(info,gas,file=None):
     '''
     Gets raw and calibrated gas data and offset from the API
