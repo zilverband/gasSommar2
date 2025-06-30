@@ -53,5 +53,5 @@ def load_sensor_data(file):
 
 def load_csv(file):
     data = pd.read_csv(file,index_col=0)
-    data.index = pd.to_datetime(data.index)
+    data.index = pd.to_datetime(data.index,format='mixed')
     return data

@@ -6,8 +6,8 @@ import numpy as np
 
 def measurement(data,plot=False):
     N = len(data)
-    num_of_base_points = 100 #int(N/50)
-    outliers = 30 #int(num_of_base_points/1000)
+    num_of_base_points = int(N/10)
+    outliers = int(num_of_base_points/3)
     
     base_points = data.nsmallest(num_of_base_points)[outliers:]
     y = base_points.mean()

@@ -16,8 +16,6 @@ STATIONS = {
 
 #Downloading sensor data
 
-
-
 def get_all_ref(start,end):
     for station in STATIONS.keys():
         api.get_ref_data(station,start,end, FILEPATH_REF + station + "_ref")
@@ -30,11 +28,15 @@ def get_all_sensor(start,end,gasses):
             "from" : start,
             "to" : end,
             }
+            for attempt in range(3):
+                try:
+                    api.get_one_gas(info,gas,FILEPATH_SENS + sensor + "_" + gas)
+                except:
+                    continue
+                else:
+                    break
 
-            api.get_one_gas(info,gas,FILEPATH_SENS + sensor + "_" + gas)
-    
-
-start = "2025-06-01"
+start = "2025-03-01"
 end = "2025-06-29"
 gasses = ["NO","NO2"]
 
