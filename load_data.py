@@ -50,3 +50,8 @@ def load_sensor_data(file):
     data = data.dropna(axis='columns',how='all')
     
     return data, units
+
+def load_csv(file):
+    data = pd.read_csv(file,index_col=0)
+    data.index = pd.to_datetime(data.index)
+    return data
