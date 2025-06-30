@@ -22,7 +22,7 @@ def measurement(data,plot=False):
 
 #sensor containing only the gas value of interest!
 class KalmanCalibrator:
-    def __init__(self,Q,m_func,sensor,delta=timedelta(days=1),x0=0,P0=100, backwards=True):
+    def __init__(self,Q,m_func,sensor,delta=timedelta(days=7),x0=0,P0=1, backwards=False):
         self.Q = Q #Number
         self.m_func = m_func #function that returns y and R
         self.x = x0 #Number
