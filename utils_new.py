@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
+import scipy
+from scipy.stats import median_abs_deviation
 
 # Takes two dataframes and aligns them in the same frequency. 
-# Resamples so that each contains equally many samples.
+# Resamples so that each dataframe contains equally many samples.
 def align_and_resample(df1, df2, freq='15min', method='interpolate'):
 
     df1=df1.tz_localize(None)
@@ -34,13 +36,7 @@ def align_and_resample(df1, df2, freq='15min', method='interpolate'):
         df1_resampled = df1_resampled.bfill()
         df2_resampled = df2_resampled.bfill()
 
-    df1_resampled, df2_resampled = df1_resampled.align(df2_resampled, join='inner')
-    
-    mask = df1_resampled.notna().all(axis=1) & df2_resampled.notna().all(axis=1)
-    df1_final = df1_resampled.loc[mask]
-    df2_final = df2_resampled.loc[mask]
-
-    return df1_final, df2_final
+    return df1_resampled, df2_resampled
 
 # Calculate mean squared error.
 def calculate_mse(df1, df2):
@@ -52,3 +48,37 @@ def calculate_mse(df1, df2):
 def calculate_corr(df1,df2):
     corr=df1.corr(df2)
     return corr
+
+# LP-filtering
+def lp_filter(df, T, cutoff):
+    dates = df.index
+    signal = df.to_numpy().flatten()
+    fs = 1/(T*60)
+    Wn = cutoff/(2*np.pi)/(fs/2)
+    b, a = scipy.signal.butter(7,Wn,btype='low')
+    yf = scipy.signal.filtfilt(b, a, signal)
+
+    # For plotting
+    """N = len(signal)
+    n = np.arange(N)
+    Y = np.fft.fft(signal)
+    plt.figure(0)
+    plt.stem(2*np.pi*fs*n/N,np.abs(Y),basefmt="")
+    plt.xlim(0,0.002)
+    plt.title("Original FFT")
+    YF = np.fft.fft(yf)"""
+
+    return dates, yf
+
+def hampel_filter(data, window_size=5, n_sigmas=3):
+    data = data.copy()
+    N = len(data)
+    k = window_size
+    for i in range(k,N-k):
+        window = data[(i-k):(i+k+1)]
+        median = np.median(window)
+        mad = median_abs_deviation(window, scale='normal')
+        if np.abs(data[i]-median)>(n_sigmas*mad):
+            data[i]=median
+
+    return data
