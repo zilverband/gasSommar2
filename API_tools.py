@@ -56,6 +56,40 @@ def combine_data(data_list):
     data = data.T.groupby(by=data.columns).mean().T
     return data
 
+def get_report_data(dataset,install_id,features={"temp_external": "temp", "humidity_external":"hum"},return_raw=False):
+    '''Takes report data and appends them to dataset.'''
+    start = dataset.index[0]
+    end = dataset.index[-1]
+    action = "report"
+
+    info = {"installationid" : install_id,
+            "from" : start,
+            "to" : end,
+            }
+    
+    response = requests.get(URL + ACTIONS[action],headers=HEADERS, params=info)
+
+    raw_data = response.json()
+    #return raw_data
+    raw_data_df = pd.DataFrame(raw_data)
+    parsed_data = {}
+    
+    for feature in raw_data_df.columns:
+        if feature in features:
+            parsed_data[features[feature]] = raw_data_df[feature].to_list()
+    
+    data = pd.DataFrame(parsed_data,index=pd.to_datetime(raw_data_df['timestamp'], unit='ms'))
+    data.index.name = None
+    data.index = data.index.tz_localize(None)
+    data = data[~data.index.duplicated()]
+    
+    if return_raw:
+        return data
+
+    dataset = pd.concat([dataset,data],axis=1)
+    dataset = dataset.dropna(thresh=(len(features.keys())+1))
+    return dataset
+
 def get_ref_data(station,start,end,file):
     url = URL_REF + STATIONS[station]
     info = {
@@ -66,7 +100,8 @@ def get_ref_data(station,start,end,file):
     response = requests.get(url,params=info)
     with open(file + ".json", "w") as f:
         f.write(response.text)
-
+        print("data saved to: " + file + ".json")
+    
 def load_csv(file):
     data = pd.read_csv(file,index_col=0)
     data.index = pd.to_datetime(data.index)
@@ -115,6 +150,8 @@ def get_one_gas(info,gas,file=None):
     data = pd.DataFrame(parsed_data,index=pd.to_datetime(raw_data_df['received_date'])) 
     data.index.name = None
     data.index = data.index.tz_localize(None)
+    data.dropna()
+    data = data[~data.index.duplicated()]
 
     #Calculates the uncalibrated data
     data[gas+"_raw"] = data[gas] + data["offset"]
