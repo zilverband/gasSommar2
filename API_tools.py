@@ -4,6 +4,7 @@ import pandas as pd
 
 
 URL = 'https://console.sensorbee.com/api'
+URL_REF = 'https://open.slb.nu/api-dev/v0.1b/'
 
 ACTIONS = {
     "report" : "/report",
@@ -19,6 +20,12 @@ GAS_STYPE = {
     "NO" : "NO-B4",
     "CO" : "CO-B4",
     "O3" : "OX-B431" 
+}
+
+STATIONS = {
+    "svea" : "api-sveav59-kvartar",
+    "torkel" : "api-torkel-kvartar",
+    "linkoping" : "api-linkoping-kvartar"
 }
 
 
@@ -49,6 +56,16 @@ def combine_data(data_list):
     data = data.T.groupby(by=data.columns).mean().T
     return data
 
+def get_ref_data(station,start,end,file):
+    url = URL_REF + STATIONS[station]
+    info = {
+        "from_date" : start,
+        "to_date" : end
+    }
+
+    response = requests.get(url,params=info)
+    with open(file + ".json", "w") as f:
+        f.write(response.text)
 
 def load_csv(file):
     data = pd.read_csv(file,index_col=0)
