@@ -57,12 +57,37 @@ def combine_data(data_list):
     data = data.T.groupby(by=data.columns).mean().T
     return data
 
-def get_report_data(dataset,install_id,features={"temp_external": "temp", "humidity_external":"hum"},return_raw=False):
-    '''Takes report data and appends them to dataset.'''
+def get_report_data_long(dataset,install_id,features={"temp_external": "temp", "humidity_external":"hum"},return_raw=False):
     start = dataset.index[0]
     end = dataset.index[-1]
-    action = "report"
+    delta = timedelta(weeks=4)
+    data = None
 
+    while start + delta < end:
+        if data is None:
+            data = get_report_data(start,start+delta,install_id,features=features)
+        else:
+            data = pd.concat([data, get_report_data(start,start+delta,install_id,features=features)])
+        start += delta
+    
+    #Gets the last bit of data
+
+    if data is None:
+        data = get_report_data(start,end,install_id,features=features)
+    else:
+        data = pd.concat([data, get_report_data(start,end,install_id,features=features)])
+
+    if return_raw:
+        return data
+    
+    dataset = pd.concat([dataset,data],axis=1)
+    dataset = dataset.dropna(thresh=(len(features.keys())+1))
+    return dataset
+
+
+def get_report_data(start,end,install_id,dataset=None,features={"temp_external": "temp", "humidity_external":"hum"}):
+    '''Takes report data and appends them to dataset.'''
+    action = "report"
     info = {"installationid" : install_id,
             "from" : start,
             "to" : end,
@@ -84,12 +109,13 @@ def get_report_data(dataset,install_id,features={"temp_external": "temp", "humid
     data.index = data.index.tz_localize(None)
     data = data[~data.index.duplicated()]
     
-    if return_raw:
+    print(dataset is None)
+    if dataset is None:
         return data
-
-    dataset = pd.concat([dataset,data],axis=1)
-    dataset = dataset.dropna(thresh=(len(features.keys())+1))
-    return dataset
+    else:
+        dataset = pd.concat([dataset,data],axis=1)
+        dataset = dataset.dropna(thresh=(len(features.keys())+1))
+        return dataset
 
 def get_ref_data(station,start,end,file):
     url = URL_REF + STATIONS[station]
@@ -108,7 +134,7 @@ def load_csv(file):
     data.index = pd.to_datetime(data.index)
     return data
 
-def get_one_gas_fast(start,end,end_name,gas,file=None):
+def get_one_gas_long(start,end,end_name,gas,file=None):
     "Gets API data by 4 weeks intervals, stabler and faster"
     start = pd.to_datetime(start)
     end = pd.to_datetime(end)
@@ -125,7 +151,6 @@ def get_one_gas_fast(start,end,end_name,gas,file=None):
             data = pd.concat([data, get_one_gas(info,gas)])
         start += delta
     
-    print(start)
     #Gets the last bit of data
     info = {"endpoint_name" : end_name,
         "from" : start.strftime('%Y-%m-%d'),
