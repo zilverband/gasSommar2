@@ -1,29 +1,12 @@
-import load_data as ld
 import pandas as pd
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import numpy as np
 
-def measurement(data,plot=False):
-    N = len(data)
-    num_of_base_points = int(N/10)
-    outliers = int(num_of_base_points/3)
-    
-    base_points = data.nsmallest(num_of_base_points)[outliers:]
-    y = base_points.mean()
-    R= base_points.var()
-
-    if plot:
-        data.plot()
-        plt.scatter(base_points.index,base_points)
-        plt.show()
-
-    return y, R
-
 #sensor containing only the gas value of interest!
 class KalmanCalibrator:
-    def __init__(self,Q,m_func,sensor,delta=timedelta(days=7),x0=0,P0=1, backwards=False):
-        self.Q = Q* (delta.days ** 2) #Number
+    def __init__(self,Q,m_func,sensor,delta=timedelta(days=7),look_back=None,x0=0,P0=1, backwards=False):
+        self.Q = Q* (delta.days ** 3) #Number
         self.m_func = m_func #function that returns y and R
         self.x = x0 #Number
         self.P = P0 #Number
@@ -32,6 +15,11 @@ class KalmanCalibrator:
         self.backwards = backwards #Bool
         self.t = self.sensor.index[0].round("D") #datetime
         self.offset = pd.DataFrame(index=sensor.index, columns=["offset","variance"])
+        
+        if look_back is None:
+            self.look_back = delta
+        else:
+            self.look_back = look_back
 
     def time_update(self):
         self.x = self.x
@@ -44,7 +32,11 @@ class KalmanCalibrator:
         self.t = self.t + self.delta
 
     def measurement_update(self):
-        y, R = self.m_func(self.sensor[(self.t - self.delta):self.t])
+        #Check a week rolling average
+        curr_time = self.sensor[(self.t - self.look_back):self.t]
+        if curr_time.empty:
+            return None
+        y, R = self.m_func(curr_time)
         if np.isnan(y) or np.isnan(R):
             return None
 
@@ -67,8 +59,11 @@ class KalmanCalibrator:
             if verbal:
                 self.print_state()
     
-    def return_calibrated_series(self):
-        return self.sensor-self.offset["offset"]
+    def return_calibrated_series(self,truncate = True):
+        cal_data = self.sensor-self.offset["offset"]
+        if truncate:
+            cal_data[cal_data < 0] = 0
+        return cal_data
 
     def plot_offset(self, confidence=True):
         if confidence:
