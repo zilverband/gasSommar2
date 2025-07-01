@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+from datetime import datetime, timedelta
 #'https://console.sensorbee.com/api/report?installationid=LKPG_Strandv_2&from=2025-03-01&to=2025-03-14'
 
 
@@ -106,6 +107,43 @@ def load_csv(file):
     data = pd.read_csv(file,index_col=0)
     data.index = pd.to_datetime(data.index)
     return data
+
+def get_one_gas_fast(start,end,end_name,gas,file=None):
+    "Gets API data by 4 weeks intervals, stabler and faster"
+    start = pd.to_datetime(start)
+    end = pd.to_datetime(end)
+    delta = timedelta(weeks=4)
+    data = None
+    while start + delta < end:
+        info = {"endpoint_name" : end_name,
+        "from" : start.strftime('%Y-%m-%d'),
+        "to" : (start+delta).strftime('%Y-%m-%d'),
+        }
+        if data is None:
+            data = get_one_gas(info,gas)
+        else:
+            data = pd.concat([data, get_one_gas(info,gas)])
+        start += delta
+    
+    print(start)
+    #Gets the last bit of data
+    info = {"endpoint_name" : end_name,
+        "from" : start.strftime('%Y-%m-%d'),
+        "to" : (end).strftime('%Y-%m-%d'),
+        }
+    if data is None:
+        data = get_one_gas(info,gas)
+    else:
+        data = pd.concat([data, get_one_gas(info,gas)])
+
+
+    if file is not None:
+        data.to_csv(file + ".csv")
+        print("data saved to: " + file + ".csv")
+
+    return data
+
+
 
 #Returns raw and calibrated gas data and offset
 def get_one_gas(info,gas,file=None):

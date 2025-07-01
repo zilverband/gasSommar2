@@ -24,20 +24,18 @@ def get_all_ref(start,end):
 def get_all_sensor(start,end,gasses):
     for gas in gasses:
         for sensor in SENSORS.keys():
-            info = {"endpoint_name" : SENSORS[sensor],
-            "from" : start,
-            "to" : end,
-            }
             for attempt in range(3):
                 try:
-                    api.get_one_gas(info,gas,FILEPATH_SENS + sensor + "_" + gas)
+                    api.get_one_gas_fast(start,end,SENSORS[sensor],gas,FILEPATH_SENS + sensor + "_" + gas)
                 except:
+                    print("Failed to get data for " + sensor + " attempt " + str(attempt+1) + " out of 3")
                     continue
                 else:
                     break
 
-start = "2025-03-01"
-end = "2025-06-29"
+
+start = "2025-01-01"
+end = "2025-06-30"
 gasses = ["NO","NO2"]
 
 get_all_ref(start,end)
