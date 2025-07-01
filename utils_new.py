@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import scipy
 from scipy.stats import median_abs_deviation
+import functions.utils as u
 
 # Takes two dataframes and aligns them in the same frequency. 
 # Resamples so that each dataframe contains equally many samples.
@@ -80,5 +81,43 @@ def hampel_filter(data, window_size=5, n_sigmas=3):
         mad = median_abs_deviation(window, scale='normal')
         if np.abs(data[i]-median)>(n_sigmas*mad):
             data[i]=median
-
     return data
+
+# Takes temp or humidity data and detects quick changes 
+"""def c_derivative(data):
+    dates = data.index
+    dt = data.index.to_series().diff()
+
+    dt_int = dt.to_numpy().astype('float')
+    data_array = data.to_numpy()
+
+    data_array_int = []
+    dt_int_new = []
+    new_dates = []
+
+    for i, value in enumerate(data_array):
+        if value != "null":
+            data_array_int.append(float(value))
+            dt_int_new.append(dt_int[i])
+            new_dates.append(dates.to_numpy()[i])
+
+    dy_int = np.diff(data_array_int)
+
+    diff = dy_int / dt_int_new[:-1]
+
+    return new_dates[:-1], diff"""
+
+def calc_derivative(df):
+    dt = df.index.to_series().diff().dt.total_seconds()
+    dy = df.diff()
+    diff = dy/dt
+    return diff
+
+def warn_temp(array):
+    warn_array = np.full(len(array), False)
+    counter = 0
+    for temp in array:
+        if (np.abs(temp) > 2):
+            warn_array[counter] = True
+        counter = counter + 1
+    return warn_array
