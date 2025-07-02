@@ -57,10 +57,30 @@ def combine_data(data_list):
     data = data.T.groupby(by=data.columns).mean().T
     return data
 
+def get_report_data_raw(start,end,install_id,features={"temp_external": "temp", "humidity_external":"hum"}):
+    start = pd.to_datetime(start)
+    end = pd.to_datetime(end)
+    delta = timedelta(weeks=2)
+    data = None
+
+    while start + delta < end:
+        if data is None:
+            data = get_report_data(start,start+delta,install_id,features=features)
+        else:
+            data = pd.concat([data, get_report_data(start,start+delta,install_id,features=features)])
+        start += delta
+    
+    #Gets the last bit of data
+    if data is None:
+        data = get_report_data(start,end,install_id,features=features)
+    else:
+        data = pd.concat([data, get_report_data(start,end,install_id,features=features)])
+    return data
+    
 def get_report_data_long(dataset,install_id,features={"temp_external": "temp", "humidity_external":"hum"},return_raw=False):
     start = dataset.index[0]
     end = dataset.index[-1]
-    delta = timedelta(weeks=4)
+    delta = timedelta(weeks=2)
     data = None
 
     while start + delta < end:
@@ -86,7 +106,6 @@ def get_report_data_long(dataset,install_id,features={"temp_external": "temp", "
 
 
 def get_report_data(start,end,install_id,dataset=None,features={"temp_external": "temp", "humidity_external":"hum"}):
-    '''Takes report data and appends them to dataset.'''
     action = "report"
     info = {"installationid" : install_id,
             "from" : start,
@@ -108,8 +127,7 @@ def get_report_data(start,end,install_id,dataset=None,features={"temp_external":
     data.index.name = None
     data.index = data.index.tz_localize(None)
     data = data[~data.index.duplicated()]
-    
-    print(dataset is None)
+   
     if dataset is None:
         return data
     else:
