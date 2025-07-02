@@ -69,19 +69,13 @@ def lp_filter(df, T, cutoff):
     plt.title("Original FFT")
     YF = np.fft.fft(yf)"""
 
-    return dates, yf
+    return pd.DataFrame(yf, dates)
 
-def hampel_filter(data, window_size=5, n_sigmas=3):
-    data = data.copy()
-    N = len(data)
-    k = window_size
-    for i in range(k,N-k):
-        window = data[(i-k):(i+k+1)]
-        median = np.median(window)
-        mad = median_abs_deviation(window, scale='normal')
-        if np.abs(data[i]-median)>(n_sigmas*mad):
-            data[i]=median
-    return data
+def hampel_filter(data,n_sigmas=2):
+    mu = data.mean()
+    sigma = data.std()
+
+    return data[np.abs(data-mu) < n_sigmas*sigma]
 
 # Takes temp or humidity data and detects quick changes 
 """def c_derivative(data):
@@ -113,11 +107,11 @@ def calc_derivative(df):
     diff = dy/dt
     return diff
 
-def warn_temp(array):
+def warning_fcn(array, limit):
     warn_array = np.full(len(array), False)
     counter = 0
     for temp in array:
-        if (np.abs(temp) > 2):
+        if (np.abs(temp) > limit):
             warn_array[counter] = True
         counter = counter + 1
     return warn_array
